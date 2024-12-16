@@ -24,12 +24,8 @@ func (c *Client) singleClientMessage(id int, message []byte) {
 }
 
 func (c *Client) sendDataMessage(id int, message []byte) {
-	if c.data.Room {
-		switch id {
-		case 0: // Общее
-			c.broadcastMessage(message)
-		}
-
+	if id == 0 {
+		c.broadcastMessage(message)
 	} else {
 		c.singleClientMessage(id, message)
 	}
@@ -108,7 +104,7 @@ func (c *Client) messageRequestProcessing() {
 			c.data.Room = true
 			c.data.RoomId = c.control.RoomId
 			c.data.UserData.Data = val.Data
-			c.send <- protocol.Coder(c.data)
+			c.processingDataMessage(c.id)
 		}
 	}
 }

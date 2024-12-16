@@ -12,7 +12,7 @@ import (
 const (
 	wsReadBuffer      = 1024
 	wsWriteBuffer     = 1024
-	maxFragmentLength = 1024
+	maxFragmentLength = 32767
 )
 
 type ChatManager struct {
