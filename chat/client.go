@@ -96,7 +96,6 @@ func (c *Client) ReadMessages() {
 	for {
 		var (
 			to, roomId int
-			message    []byte
 		)
 
 		messageType, payload, err := c.conn.ReadMessage()
@@ -179,7 +178,7 @@ func (c *Client) ReadMessages() {
 				to = c.data.RoomId
 			}
 			c.data.UserId = c.id
-			message = protocol.Coder(c.data)
+			c.processingDataMessage(to)
 		}
 
 		//Acknowledge message
@@ -193,20 +192,6 @@ func (c *Client) ReadMessages() {
 			switch c.ack.Type {
 			case protocol.Read:
 				c.messageReadProcessing()
-			}
-		}
-
-		if c.data.Room {
-			switch to {
-			case 0: // Общее
-				c.broadcastMessage(message)
-			}
-
-		} else {
-			for wsclient := range c.manager.clients {
-				if to == wsclient.id {
-					wsclient.send <- message
-				}
 			}
 		}
 	}

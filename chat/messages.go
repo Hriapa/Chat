@@ -7,11 +7,53 @@ import (
 )
 
 func (c *Client) broadcastMessage(message []byte) {
-	for client := range c.manager.clients {
+	for _, client := range c.manager.clients {
 		if c.conn != client.conn {
 			client.send <- message
 		}
 	}
+}
+
+func (c *Client) singleClientMessage(id int, message []byte) {
+	val, ok := c.manager.clients[id]
+	if !ok {
+		log.Printf(`client is offline`)
+		return
+	}
+	val.send <- message
+}
+
+func (c *Client) sendDataMessage(id int, message []byte) {
+	if c.data.Room {
+		switch id {
+		case 0: // Общее
+			c.broadcastMessage(message)
+		}
+
+	} else {
+		c.singleClientMessage(id, message)
+	}
+}
+
+func (c *Client) processingDataMessage(id int) {
+	if len(c.data.UserData.Data) > maxFragmentLength {
+		c.data.UserData.Fragmentation.On = true
+		c.data.UserData.Fragmentation.FragmentType = protocol.MiidleFragment
+		result := MessageFragmentation(c.data.UserData.Data, maxFragmentLength)
+		for _, val := range result {
+			if val.SequenceNumber == 1 {
+				c.data.UserData.Fragmentation.FragmentType = protocol.FirstFragment
+			} else if val.SequenceNumber == uint8(len(result)) {
+				c.data.UserData.Fragmentation.FragmentType = protocol.LastFragment
+			}
+			c.data.UserData.Fragmentation.Counter = val.SequenceNumber
+			c.data.UserData.Data = val.Data
+			c.sendDataMessage(id, protocol.Coder(c.data))
+		}
+		return
+	}
+	c.data.UserData.Fragmentation.On = false
+	c.sendDataMessage(id, protocol.Coder(c.data))
 }
 
 func (c *Client) connect() {
@@ -44,7 +86,7 @@ func (c *ChatManager) registerNewUser(user *model.UserName) {
 
 	message := protocol.Coder(control)
 
-	for client := range c.clients {
+	for _, client := range c.clients {
 		client.send <- message
 	}
 }

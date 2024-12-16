@@ -10,14 +10,15 @@ import (
 )
 
 const (
-	wsReadBuffer  = 1024
-	wsWriteBuffer = 1024
+	wsReadBuffer      = 1024
+	wsWriteBuffer     = 1024
+	maxFragmentLength = 1024
 )
 
 type ChatManager struct {
 	sync.RWMutex
 	Upgrader  websocket.Upgrader
-	clients   map[*Client]bool
+	clients   map[int]*Client
 	NewUser   chan *model.UserName
 	Register  chan *Client
 	Delete    chan *Client
@@ -31,7 +32,7 @@ func NewChatManager(s *store.Store) *ChatManager {
 			ReadBufferSize:  wsReadBuffer,
 			WriteBufferSize: wsWriteBuffer,
 		},
-		clients:   make(map[*Client]bool),
+		clients:   make(map[int]*Client),
 		NewUser:   make(chan *model.UserName),
 		Register:  make(chan *Client),
 		Delete:    make(chan *Client),
@@ -53,7 +54,7 @@ func (c *ChatManager) registerClient(client *Client) {
 	c.Lock()
 	defer c.Unlock()
 
-	c.clients[client] = true
+	c.clients[client.id] = client
 	if val, ok := c.Store.User().UsersList[client.id]; ok {
 		val.Online = true
 	}
@@ -67,13 +68,13 @@ func (c *ChatManager) deleteClient(client *Client) error {
 	defer c.Unlock()
 
 	var err error
-	if _, ok := c.clients[client]; ok {
+	if _, ok := c.clients[client.id]; ok {
 		client.disconnect()
 		if val, ok := c.Store.User().UsersList[client.id]; ok {
 			val.Online = false
 		}
 		err = client.conn.Close()
-		delete(c.clients, client)
+		delete(c.clients, client.id)
 		log.Println("client deleted")
 	}
 	return err
