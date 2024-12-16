@@ -1,0 +1,1 @@
+{"dbhost":"localhost","dbport":5432,"dbuser":"postgres","dbpassword":"gfhec1985","dbname":"chat_server","dbutable":"users","dbmtable":"messages","dbrtable":"rooms","dbnrtable":"nr_messages"}
