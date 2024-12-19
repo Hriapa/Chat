@@ -34,13 +34,14 @@ func (c *Client) sendDataMessage(id int, message []byte) {
 func (c *Client) processingDataMessage(id int) {
 	if len(c.data.UserData.Data) > maxFragmentLength {
 		c.data.UserData.Fragmentation.On = true
-		c.data.UserData.Fragmentation.FragmentType = protocol.MiidleFragment
 		result := MessageFragmentation(c.data.UserData.Data, maxFragmentLength)
 		for _, val := range result {
 			if val.SequenceNumber == 1 {
 				c.data.UserData.Fragmentation.FragmentType = protocol.FirstFragment
 			} else if val.SequenceNumber == uint8(len(result)) {
 				c.data.UserData.Fragmentation.FragmentType = protocol.LastFragment
+			} else {
+				c.data.UserData.Fragmentation.FragmentType = protocol.MiidleFragment
 			}
 			c.data.UserData.Fragmentation.Counter = val.SequenceNumber
 			c.data.UserData.Data = val.Data
