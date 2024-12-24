@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"webServer/model"
 
+	"github.com/golang-migrate/migrate/v4"
+	"github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/lib/pq"
 )
 
@@ -41,10 +44,15 @@ func (s *Store) Open() error {
 		return err
 	}
 
-	// Создаём таблицы, если они отсутствуют
+	// Migrations
+
+	if err = migration(db); err != nil {
+		return err
+	}
 
 	s.Db = db
 	s.Connect = true
+
 	return nil
 }
 
@@ -52,7 +60,28 @@ func (s *Store) Close() {
 	s.Db.Close()
 }
 
-// Создание таблиц
+// migration
+
+func migration(db *sql.DB) error {
+
+	driver, err := postgres.WithInstance(db, &postgres.Config{})
+	if err != nil {
+		return err
+	}
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://store/migrations",
+		"postgres", driver,
+	)
+	if err != nil {
+		return err
+	}
+
+	if err = m.Up(); err != nil && err != migrate.ErrNoChange {
+		return err
+	}
+
+	return nil
+}
 
 //Инициализация хранилища пользователей
 
