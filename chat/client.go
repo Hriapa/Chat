@@ -232,7 +232,7 @@ func (c *Client) WriteMessages() {
 	}
 }
 
-// Проверка не собранных фрагментированных сообщений
+// Проверка несобранных фрагментированных сообщений
 func (c *Client) AssemblerStoreCleaner() {
 	ticker := time.NewTicker(60 * time.Second)
 
@@ -246,7 +246,7 @@ func (c *Client) AssemblerStoreCleaner() {
 	}()
 }
 
-// отправка ошибок, если не собранные сообщения удаленны из хранилища
+// отправка ошибок, если несобранные сообщения удаленны из хранилища
 
 func (c *Client) AssemblingStoreErrorProcessing() {
 	for message := range c.assembler.Err {
