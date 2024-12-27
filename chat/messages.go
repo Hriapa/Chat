@@ -2,6 +2,7 @@ package chat
 
 import (
 	"log"
+	"time"
 	"webServer/model"
 	"webServer/protocol"
 )
@@ -86,6 +87,30 @@ func (c *ChatManager) registerNewUser(user *model.UserName) {
 	for _, client := range c.clients {
 		client.send <- message
 	}
+}
+
+func (c *Client) userInfoUpdateProcessing() {
+
+	date := time.Date(int(c.control.UserInfo.BirthDate.Year), time.Month(c.control.UserInfo.BirthDate.Month), int(c.control.UserInfo.BirthDate.Day), 0, 0, 0, 0, time.UTC)
+
+	user := &model.UserInfo{
+		Id:         c.id,
+		Name:       c.control.UserInfo.Name,
+		Familyname: c.control.UserInfo.FamilyName,
+		Surname:    c.control.UserInfo.Surname,
+		Birthdate:  date.Format("2006-01-02"),
+	}
+
+	err := c.manager.Store.User().UpdateUserInfo(user)
+	if err != nil {
+		log.Println("error update user info:", err.Error())
+		cleaner(c.err)
+		c.err.Type = protocol.ControlMessageError
+		c.err.ControlMessageType = protocol.UserInfoResponseMessageType
+		c.send <- coder(c.err)
+		return
+	}
+	// TO DO: SEND OK
 }
 
 func (c *Client) messageRequestProcessing() {

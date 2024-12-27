@@ -11,7 +11,8 @@ const (
 	DisconnectMessageType
 	RegistrationMessageType
 	UserUpdateMessageType
-	UserInfoMessageType
+	UserInfoRequestMessageType
+	UserInfoResponseMessageType
 	UsersListMessageType
 	MessagesRequestMessageType
 	NumberOfMessagesMessageType
@@ -59,7 +60,7 @@ func (c *ControlMessage) Code() []byte {
 		}
 		out = append(out, numericCoder(c.UserId)...)
 		out = append(out, dataCoder([]byte(c.UserName))...)
-	case UserInfoMessageType:
+	case UserInfoResponseMessageType:
 		if c.UserInfo != nil {
 			out = append(out, c.UserInfo.codeUserInfo()...)
 		}
@@ -76,7 +77,7 @@ func (c *ControlMessage) Code() []byte {
 }
 
 func (c *ControlMessage) Decode(in []byte) error {
-	if len(in) < 3 {
+	if len(in) < 2 {
 		return ErrorMessageTooShort
 	}
 	if in[0] != byte(ControlMessageTitle) {
@@ -104,7 +105,7 @@ func (c *ControlMessage) Decode(in []byte) error {
 		}
 		name, _, err = dataDecoder(in)
 		c.UserName = string(name)
-	case UserInfoMessageType:
+	case UserInfoResponseMessageType:
 		if c.UserInfo == nil {
 			c.UserInfo = &UserInfo{}
 		}

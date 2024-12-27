@@ -35,7 +35,7 @@ func (c *ControlMessage) UserUpdateTestMessage() {
 
 func (c *ControlMessage) UserInfoTestMessage() {
 	c.Clear()
-	c.Type = UserInfoMessageType
+	c.Type = UserInfoResponseMessageType
 	c.UserInfo.Name = `Ivan`
 	c.UserInfo.Surname = `Ivanovich`
 	c.UserInfo.FamilyName = `Ivanov`
@@ -64,7 +64,7 @@ func (c *ControlMessage) ControlCommandTestCoder(command uint8) []byte {
 		c.RegistrationTestMessage()
 	case UserUpdateMessageType:
 		c.UserUpdateTestMessage()
-	case UserInfoMessageType:
+	case UserInfoResponseMessageType:
 		c.UserInfoTestMessage()
 	case UsersListMessageType:
 		c.UsersListTestMessage()
