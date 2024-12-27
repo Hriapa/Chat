@@ -13,6 +13,7 @@ const (
 	UserUpdateMessageType
 	UserInfoRequestMessageType
 	UserInfoResponseMessageType
+	UserInfoUpdateMessageType
 	UsersListMessageType
 	MessagesRequestMessageType
 	NumberOfMessagesMessageType
@@ -60,7 +61,7 @@ func (c *ControlMessage) Code() []byte {
 		}
 		out = append(out, numericCoder(c.UserId)...)
 		out = append(out, dataCoder([]byte(c.UserName))...)
-	case UserInfoResponseMessageType:
+	case UserInfoResponseMessageType, UserInfoUpdateMessageType:
 		if c.UserInfo != nil {
 			out = append(out, c.UserInfo.codeUserInfo()...)
 		}
@@ -105,7 +106,7 @@ func (c *ControlMessage) Decode(in []byte) error {
 		}
 		name, _, err = dataDecoder(in)
 		c.UserName = string(name)
-	case UserInfoResponseMessageType:
+	case UserInfoResponseMessageType, UserInfoUpdateMessageType:
 		if c.UserInfo == nil {
 			c.UserInfo = &UserInfo{}
 		}
@@ -171,11 +172,13 @@ func (u *UserInfo) codeUserInfo() []byte {
 		out = append(out, dataCoder([]byte(u.FamilyName))...)
 	}
 
-	out = append(out, []byte{uint8(birthDateTitle), u.BirthDate.Day, u.BirthDate.Month}...)
+	if u.BirthDate.Year != 0 {
+		out = append(out, []byte{uint8(birthDateTitle), u.BirthDate.Day, u.BirthDate.Month}...)
 
-	year := make([]byte, 2)
-	binary.BigEndian.PutUint16(year, u.BirthDate.Year)
-	out = append(out, year...)
+		year := make([]byte, 2)
+		binary.BigEndian.PutUint16(year, u.BirthDate.Year)
+		out = append(out, year...)
+	}
 
 	return out
 }
