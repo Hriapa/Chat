@@ -3,17 +3,32 @@ package protocol
 type AckMessageType uint8
 
 const (
-	Send AckMessageType = iota + 1
+	ControlAck AckMessageType = iota + 1
+	DataAck
+)
+
+type ControlAckType uint8
+
+const (
+	UserInfoUpdated ControlAckType = iota + 1
+)
+
+type DataAckType uint8
+
+const (
+	Send DataAckType = iota + 1
 	Receive
 	Read
 )
 
 type AckMessage struct {
-	Type        AckMessageType
-	IndexNumber int
-	UserId      int
-	Room        bool
-	RoomId      int
+	Type           AckMessageType
+	ControlAckType ControlAckType
+	DataAckType    DataAckType
+	IndexNumber    int
+	UserId         int
+	Room           bool
+	RoomId         int
 }
 
 func NewAckMessage() *AckMessage {
@@ -22,6 +37,8 @@ func NewAckMessage() *AckMessage {
 
 func (a *AckMessage) Clear() {
 	a.Type = 0
+	a.ControlAckType = 0
+	a.DataAckType = 0
 	a.IndexNumber = 0
 	a.UserId = 0
 	a.Room = false
@@ -33,8 +50,11 @@ func (a *AckMessage) Code() []byte {
 		length            int
 		index, user, room []byte
 	)
-	index = numericCoder(a.IndexNumber)
-	length = 2 + len(index)
+	length = 3
+	if a.Type == DataAck {
+		index = numericCoder(a.IndexNumber)
+		length += len(index)
+	}
 	if a.UserId != 0 {
 		user = titleNumericCoder(a.UserId, uint8(userIdTitle))
 		length += len(user)
@@ -45,6 +65,11 @@ func (a *AckMessage) Code() []byte {
 	}
 	out := make([]byte, 2, length)
 	copy(out, []byte{uint8(AckMessageTitle), uint8(a.Type)})
+	if a.Type == ControlAck {
+		out = append(out, uint8(a.ControlAckType))
+		return out
+	}
+	out = append(out, uint8(a.DataAckType))
 	out = append(out, index...)
 	if a.UserId != 0 {
 		out = append(out, user...)
@@ -56,7 +81,7 @@ func (a *AckMessage) Code() []byte {
 }
 
 func (a *AckMessage) Decode(in []byte) error {
-	if len(in) < 5 {
+	if len(in) < 3 {
 		return ErrorMessageTooShort
 	}
 	if in[0] != byte(AckMessageTitle) {
@@ -68,6 +93,15 @@ func (a *AckMessage) Decode(in []byte) error {
 	)
 	a.Type = AckMessageType(in[1])
 	in = in[2:]
+	if a.Type == ControlAck {
+		a.ControlAckType = ControlAckType(in[0])
+		return nil
+	}
+	if len(in) < 2 {
+		return ErrorMessageTooShort
+	}
+	a.DataAckType = DataAckType(in[0])
+	in = in[1:]
 	a.IndexNumber, in, err = numericDecoder(in)
 	if err != nil {
 		return err

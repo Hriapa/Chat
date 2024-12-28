@@ -172,27 +172,36 @@ func readImege(path string) []byte {
 
 // Acknowledge Message
 
-func (a *AckMessage) Send() {
+func (a *AckMessage) ControlUserUpdate() {
 	a.Clear()
-	a.Type = Send
+	a.Type = ControlAck
+	a.ControlAckType = UserInfoUpdated
+}
+
+func (a *AckMessage) DataSend() {
+	a.Clear()
+	a.Type = DataAck
+	a.DataAckType = Send
 	a.IndexNumber = 10
 	a.UserId = 1024
 	a.Room = false
 	a.RoomId = 0
 }
 
-func (a *AckMessage) Recieve() {
+func (a *AckMessage) DataRecieve() {
 	a.Clear()
-	a.Type = Receive
+	a.Type = DataAck
+	a.DataAckType = Receive
 	a.IndexNumber = 1024
 	a.UserId = 0
 	a.Room = true
 	a.RoomId = 0
 }
 
-func (a *AckMessage) Read() {
+func (a *AckMessage) DataRead() {
 	a.Clear()
-	a.Type = Read
+	a.Type = DataAck
+	a.DataAckType = Read
 	a.IndexNumber = 255
 	a.UserId = 10
 	a.Room = false
@@ -202,11 +211,13 @@ func (a *AckMessage) Read() {
 func (a *AckMessage) AckMessageTestCoder(command uint8) []byte {
 	switch command {
 	case 1:
-		a.Send()
+		a.ControlUserUpdate()
 	case 2:
-		a.Recieve()
+		a.DataSend()
 	case 3:
-		a.Read()
+		a.DataRecieve()
+	case 4:
+		a.DataRead()
 	default:
 		log.Println(`Unknown test for Data Message`)
 		return nil

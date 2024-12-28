@@ -583,37 +583,48 @@ func TestAckMessageCoder(t *testing.T) {
 		want  []byte
 	}{
 		{
-			name: `Test AckSend`,
+			name: `Test ControlAckUserUpdate`,
 			input: AckMessage{
-				Type:        Send,
+				Type:           ControlAck,
+				ControlAckType: UserInfoUpdated,
+			},
+			want: []byte{0x02, 0x01, 0x01},
+		},
+		{
+			name: `Test DataAckSend`,
+			input: AckMessage{
+				Type:        DataAck,
+				DataAckType: Send,
 				IndexNumber: 10,
 				UserId:      1024,
 				Room:        false,
 				RoomId:      0,
 			},
-			want: []byte{0x02, 0x01, 0x0a, 0x81, 0x02, 0x04, 0x00},
+			want: []byte{0x02, 0x02, 0x01, 0x0a, 0x81, 0x02, 0x04, 0x00},
 		},
 		{
-			name: `Test AckReceived`,
+			name: `Test DataAckReceived`,
 			input: AckMessage{
-				Type:        Receive,
+				Type:        DataAck,
+				DataAckType: Receive,
 				IndexNumber: 1024,
 				UserId:      0,
 				Room:        true,
 				RoomId:      0,
 			},
-			want: []byte{0x02, 0x02, 0x82, 0x04, 0x00, 0x02, 0x00},
+			want: []byte{0x02, 0x02, 0x02, 0x82, 0x04, 0x00, 0x02, 0x00},
 		},
 		{
-			name: `Test AckRead`,
+			name: `Test DataAckRead`,
 			input: AckMessage{
-				Type:        Read,
+				Type:        DataAck,
+				DataAckType: Read,
 				IndexNumber: 255,
 				UserId:      10,
 				Room:        false,
 				RoomId:      0,
 			},
-			want: []byte{0x02, 0x03, 0x81, 0xff, 0x01, 0x0a},
+			want: []byte{0x02, 0x02, 0x03, 0x81, 0xff, 0x01, 0x0a},
 		},
 	} {
 		ack := &test.input
@@ -632,10 +643,19 @@ func TestAckMessageDecoder(t *testing.T) {
 		want  AckMessage
 	}{
 		{
-			name:  `Test AckSend`,
-			input: []byte{0x02, 0x01, 0x0a, 0x81, 0x02, 0x04, 0x00},
+			name:  `Test ControlAckUserUpdate`,
+			input: []byte{0x02, 0x01, 0x01},
 			want: AckMessage{
-				Type:        Send,
+				Type:           ControlAck,
+				ControlAckType: UserInfoUpdated,
+			},
+		},
+		{
+			name:  `Test AckSend`,
+			input: []byte{0x02, 0x02, 0x01, 0x0a, 0x81, 0x02, 0x04, 0x00},
+			want: AckMessage{
+				Type:        DataAck,
+				DataAckType: Send,
 				IndexNumber: 10,
 				UserId:      1024,
 				Room:        false,
@@ -644,9 +664,10 @@ func TestAckMessageDecoder(t *testing.T) {
 		},
 		{
 			name:  `Test AckReceived`,
-			input: []byte{0x02, 0x02, 0x82, 0x04, 0x00, 0x02, 0x00},
+			input: []byte{0x02, 0x02, 0x02, 0x82, 0x04, 0x00, 0x02, 0x00},
 			want: AckMessage{
-				Type:        Receive,
+				Type:        DataAck,
+				DataAckType: Receive,
 				IndexNumber: 1024,
 				UserId:      0,
 				Room:        true,
@@ -655,9 +676,10 @@ func TestAckMessageDecoder(t *testing.T) {
 		},
 		{
 			name:  `Test AckRead`,
-			input: []byte{0x02, 0x03, 0x81, 0xff, 0x01, 0x0a},
+			input: []byte{0x02, 0x02, 0x03, 0x81, 0xff, 0x01, 0x0a},
 			want: AckMessage{
-				Type:        Read,
+				Type:        DataAck,
+				DataAckType: Read,
 				IndexNumber: 255,
 				UserId:      10,
 				Room:        false,
