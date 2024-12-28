@@ -61,7 +61,6 @@ func (s *ApiServer) configureRouter() {
 	s.router.HandleFunc(`/login`, s.authorization())
 	s.router.HandleFunc(`/logout`, s.logout())
 	s.router.HandleFunc(`/restore`, s.restorePassword())
-	s.router.HandleFunc(`/userupdate`, s.updateUser())
 	s.router.HandleFunc(`/changepass`, s.changePassword())
 	s.router.HandleFunc(`/chat`, s.auntification(s.chat()))
 	s.router.HandleFunc(`/username`, s.userName())

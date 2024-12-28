@@ -193,29 +193,6 @@ func (s *ApiServer) logout() http.HandlerFunc {
 	}
 }
 
-// Обновление информации о пользователе
-func (s *ApiServer) updateUser() http.HandlerFunc {
-
-	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
-		if r.Method != http.MethodPost {
-			return
-		}
-		user := &model.UserInfo{}
-
-		if err := json.NewDecoder(r.Body).Decode(user); err != nil {
-			s.error(w, r, http.StatusBadRequest, err)
-			return
-		}
-
-		if err := s.store.User().UpdateUserInfo(user); err != nil {
-			log.Println("error update user info:", err.Error())
-			s.error(w, r, http.StatusInternalServerError, err)
-		}
-		s.result(w, r, http.StatusOK, nil)
-	}
-}
-
 // Отправка имени пользователя
 
 func (s *ApiServer) userName() http.HandlerFunc {
@@ -247,13 +224,7 @@ func (s *ApiServer) userName() http.HandlerFunc {
 		if user.Name == "" {
 			name = user.Login
 		} else {
-			name = user.Name
-			if user.Surname != "" {
-				name += " " + user.Surname
-			}
-			if user.Familyname != "" {
-				name += " " + user.Familyname
-			}
+			name = user.CreateUserName()
 		}
 		resp := &response{
 			Name: name,

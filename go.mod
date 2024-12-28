@@ -5,7 +5,6 @@ go 1.22.0
 toolchain go1.22.10
 
 require (
-	github.com/golang-migrate/migrate v3.5.4+incompatible
 	github.com/golang-migrate/migrate/v4 v4.18.1
 	github.com/gorilla/sessions v1.2.2
 	github.com/gorilla/websocket v1.5.1

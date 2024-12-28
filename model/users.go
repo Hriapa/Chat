@@ -4,6 +4,7 @@ import (
 	"crypto/md5"
 	"encoding/hex"
 	"math/rand"
+	"time"
 )
 
 type User struct {
@@ -25,7 +26,7 @@ type UserInfo struct {
 	Name       string `json:"name"`
 	Familyname string `json:"familyname"`
 	Surname    string `json:"surname"`
-	Birthdate  string `json:"birthdate"`
+	Birthdate  time.Time
 }
 
 type UserInList struct {
@@ -71,4 +72,18 @@ func (u *User) CreateNewPassword() {
 		buf[i], buf[j] = buf[j], buf[i]
 	})
 	u.Password = string(buf)
+}
+
+func (u *UserInfo) CreateUserName() string {
+	name := ""
+	if u.Name != "" {
+		name += u.Name
+	}
+	if u.Surname != "" {
+		name += " " + u.Surname
+	}
+	if u.Familyname != "" {
+		name += " " + u.Familyname
+	}
+	return name
 }

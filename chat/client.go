@@ -121,6 +121,10 @@ func (c *Client) ReadMessages() {
 				continue
 			}
 			switch c.control.Type {
+			case protocol.UserInfoRequestMessageType:
+				c.userInfoRequestProcessing()
+			case protocol.UserInfoUpdateMessageType:
+				c.userInfoUpdateProcessing()
 			case protocol.MessagesRequestMessageType:
 				c.messageRequestProcessing()
 			}
@@ -181,7 +185,7 @@ func (c *Client) ReadMessages() {
 			c.processingDataMessage(to)
 		}
 
-		//Acknowledge message
+		// Data acknowledge message
 		if payload[0] == uint8(protocol.AckMessageTitle) {
 			protocol.Cleaner(c.ack)
 			err = protocol.Decoder(c.ack, payload)
@@ -189,7 +193,10 @@ func (c *Client) ReadMessages() {
 				log.Printf("error decoding control message: %v", err)
 				continue
 			}
-			switch c.ack.Type {
+			if c.ack.Type != protocol.DataAck {
+				continue
+			}
+			switch c.ack.DataAckType {
 			case protocol.Read:
 				c.messageReadProcessing()
 			}

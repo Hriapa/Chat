@@ -26,7 +26,7 @@ func (u *UsersStore) AddUser(user *model.User) error {
 		``,
 		``,
 		``,
-		`1922-02-02`,
+		time.Date(0, 0, 0, 0, 0, 0, 0, time.UTC),
 	).Scan(&user.Id); err != nil {
 		return err
 	}
@@ -63,14 +63,10 @@ func (u *UsersStore) GetUserInfo(user *model.UserInfo) error {
 	if !u.store.Connect {
 		return ErrorConnectToDatabase
 	}
-
-	var date time.Time
-
 	row := u.store.Db.QueryRow("SELECT login, name, familyname, surname, birthdate from "+u.store.Config.DbUsersTable+" where id = $1", user.Id)
-	if err := row.Scan(&user.Login, &user.Name, &user.Familyname, &user.Surname, &date); err != nil {
+	if err := row.Scan(&user.Login, &user.Name, &user.Familyname, &user.Surname, &user.Birthdate); err != nil {
 		return ErrorUserNotFound
 	}
-	user.Birthdate = date.Format("2006-01-02")
 	return nil
 }
 

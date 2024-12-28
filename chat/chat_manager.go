@@ -4,6 +4,7 @@ import (
 	"log"
 	"sync"
 	"webServer/model"
+	"webServer/protocol"
 	"webServer/store"
 
 	"github.com/gorilla/websocket"
@@ -91,4 +92,18 @@ func (c *ChatManager) Run() {
 			c.deleteClient(client)
 		}
 	}
+}
+
+// for message format
+
+func cleaner(m protocol.Message) {
+	m.Clear()
+}
+
+func coder(m protocol.Message) []byte {
+	return m.Code()
+}
+
+func decoder(m protocol.Message, data []byte) error {
+	return m.Decode(data)
 }

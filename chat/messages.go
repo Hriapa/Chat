@@ -32,6 +32,8 @@ func (c *Client) sendDataMessage(id int, message []byte) {
 	}
 }
 
+// Data Message
+
 func (c *Client) processingDataMessage(id int) {
 	if len(c.data.UserData.Data) > maxFragmentLength {
 		c.data.UserData.Fragmentation.On = true
@@ -54,6 +56,8 @@ func (c *Client) processingDataMessage(id int) {
 	c.sendDataMessage(id, protocol.Coder(c.data))
 }
 
+// Connect Message Processing
+
 func (c *Client) connect() {
 
 	protocol.Cleaner(c.control)
@@ -64,6 +68,8 @@ func (c *Client) connect() {
 	c.broadcastMessage(protocol.Coder(c.control))
 }
 
+// Disconnect Message Processing
+
 func (c *Client) disconnect() {
 
 	protocol.Cleaner(c.control)
@@ -73,6 +79,8 @@ func (c *Client) disconnect() {
 
 	c.broadcastMessage(protocol.Coder(c.control))
 }
+
+// Registration Message Processing
 
 func (c *ChatManager) registerNewUser(user *model.UserName) {
 
@@ -89,6 +97,29 @@ func (c *ChatManager) registerNewUser(user *model.UserName) {
 	}
 }
 
+// User Info Message Processing
+
+func (c *Client) userInfoRequestProcessing() {
+	user := &model.UserInfo{
+		Id: c.id,
+	}
+	err := c.manager.Store.User().GetUserInfo(user)
+	if err != nil {
+		log.Println("error select user info from Db:", err.Error())
+		c.userInfoErrorProcessing()
+		return
+	}
+	cleaner(c.control)
+	c.control.Type = protocol.UserInfoResponseMessageType
+	c.control.UserInfo = &protocol.UserInfo{
+		Name:       user.Name,
+		Surname:    user.Surname,
+		FamilyName: user.Familyname,
+		BirthDate:  dateConverter(user.Birthdate),
+	}
+	c.send <- coder(c.control)
+}
+
 func (c *Client) userInfoUpdateProcessing() {
 
 	date := time.Date(int(c.control.UserInfo.BirthDate.Year), time.Month(c.control.UserInfo.BirthDate.Month), int(c.control.UserInfo.BirthDate.Day), 0, 0, 0, 0, time.UTC)
@@ -98,20 +129,19 @@ func (c *Client) userInfoUpdateProcessing() {
 		Name:       c.control.UserInfo.Name,
 		Familyname: c.control.UserInfo.FamilyName,
 		Surname:    c.control.UserInfo.Surname,
-		Birthdate:  date.Format("2006-01-02"),
+		Birthdate:  date,
 	}
 
 	err := c.manager.Store.User().UpdateUserInfo(user)
 	if err != nil {
 		log.Println("error update user info:", err.Error())
-		cleaner(c.err)
-		c.err.Type = protocol.ControlMessageError
-		c.err.ControlMessageType = protocol.UserInfoResponseMessageType
-		c.send <- coder(c.err)
+		c.userInfoErrorProcessing()
 		return
 	}
 	// TO DO: SEND OK
 }
+
+// Message Request Processing
 
 func (c *Client) messageRequestProcessing() {
 	_, err := c.getRoomId(c.control.RoomId)
@@ -135,6 +165,8 @@ func (c *Client) messageRequestProcessing() {
 	}
 }
 
+// Ack Processing
+
 func (c *Client) messageReadProcessing() {
 	var err error
 	if c.ack.UserId != 0 {
@@ -146,6 +178,8 @@ func (c *Client) messageReadProcessing() {
 	}
 }
 
+// Error procrssing
+
 func (c *Client) messageDataErrorProcessing() {
 	protocol.Cleaner(c.err)
 	c.err.Type = protocol.DataMessageError
@@ -156,6 +190,13 @@ func (c *Client) messageDataErrorProcessing() {
 		c.err.UserId = c.data.UserId
 	}
 	c.send <- protocol.Coder(c.err)
+}
+
+func (c *Client) userInfoErrorProcessing() {
+	cleaner(c.err)
+	c.err.Type = protocol.ControlMessageError
+	c.err.ControlMessageType = protocol.UserInfoResponseMessageType
+	c.send <- coder(c.err)
 }
 
 // Получаем идентификатор комнаты для  БД
@@ -175,6 +216,7 @@ func (c *Client) getRoomId(id int) (int, error) {
 }
 
 // Подготовак сообщений из БД для отправки
+
 func (c *Client) chekAndSendMessages() bool {
 	lastMessageNumber := c.control.MessagesRequest.LastMessageNumber
 	numberOfMessages := c.rooms[c.control.RoomId].NumberOfMessage
@@ -198,4 +240,22 @@ func (c *Client) chekAndSendMessages() bool {
 		return false
 	}
 	return true
+}
+
+// Convert date from string to protocol format
+
+func dateConverter(date time.Time) protocol.BirthDate {
+	if date.Year() == -1 {
+		return protocol.BirthDate{
+			Year:  0,
+			Month: 0,
+			Day:   0,
+		}
+	}
+	birthDate := protocol.BirthDate{
+		Year:  uint16(date.Year()),
+		Month: uint8(date.Month()),
+		Day:   uint8(date.Day()),
+	}
+	return birthDate
 }
