@@ -48,36 +48,36 @@ func (c *Client) processingDataMessage(id int) {
 			}
 			c.data.UserData.Fragmentation.Counter = val.SequenceNumber
 			c.data.UserData.Data = val.Data
-			c.sendDataMessage(id, protocol.Coder(c.data))
+			c.sendDataMessage(id, coder(c.data))
 		}
 		return
 	}
 	c.data.UserData.Fragmentation.On = false
-	c.sendDataMessage(id, protocol.Coder(c.data))
+	c.sendDataMessage(id, coder(c.data))
 }
 
 // Connect Message Processing
 
 func (c *Client) connect() {
 
-	protocol.Cleaner(c.control)
+	cleaner(c.control)
 
 	c.control.Type = protocol.ConnectMessageType
 	c.control.UserId = c.id
 
-	c.broadcastMessage(protocol.Coder(c.control))
+	c.broadcastMessage(coder(c.control))
 }
 
 // Disconnect Message Processing
 
 func (c *Client) disconnect() {
 
-	protocol.Cleaner(c.control)
+	cleaner(c.control)
 
 	c.control.Type = protocol.DisconnectMessageType
 	c.control.UserId = c.id
 
-	c.broadcastMessage(protocol.Coder(c.control))
+	c.broadcastMessage(coder(c.control))
 }
 
 // Registration Message Processing
@@ -90,7 +90,7 @@ func (c *ChatManager) registerNewUser(user *model.UserName) {
 	control.UserId = user.Id
 	control.UserName = user.Name
 
-	message := protocol.Coder(control)
+	message := coder(control)
 
 	for _, client := range c.clients {
 		client.send <- message
@@ -138,7 +138,24 @@ func (c *Client) userInfoUpdateProcessing() {
 		c.userInfoErrorProcessing()
 		return
 	}
-	// TO DO: SEND OK
+	// confirm update to user
+	c.userInfoUpdateConfirm()
+	// send to another user message about name update
+	c.userUpdate(user.CreateUserName())
+}
+
+// UserUpdate
+
+func (c *Client) userUpdate(name string) {
+	if val, ok := c.manager.Store.User().UsersList[c.id]; ok {
+		val.Name = name
+	}
+	cleaner(c.control)
+	c.control.Type = protocol.UserUpdateMessageType
+	c.control.UserId = c.id
+	c.control.UserName = name
+
+	c.broadcastMessage(coder(c.control))
 }
 
 // Message Request Processing
@@ -151,7 +168,7 @@ func (c *Client) messageRequestProcessing() {
 		return
 	}
 	if c.chekAndSendMessages() {
-		protocol.Cleaner(c.data)
+		cleaner(c.data)
 		for _, val := range c.lastMessages {
 			c.data.Type = protocol.OldMessage
 			c.data.Format = val.MessageFormat
@@ -167,6 +184,13 @@ func (c *Client) messageRequestProcessing() {
 
 // Ack Processing
 
+func (c *Client) userInfoUpdateConfirm() {
+	cleaner(c.ack)
+	c.ack.Type = protocol.ControlAck
+	c.ack.ControlAckType = protocol.UserInfoUpdated
+	c.send <- coder(c.ack)
+}
+
 func (c *Client) messageReadProcessing() {
 	var err error
 	if c.ack.UserId != 0 {
@@ -176,12 +200,13 @@ func (c *Client) messageReadProcessing() {
 			return
 		}
 	}
+	// TODO Create sender to opponent
 }
 
 // Error procrssing
 
 func (c *Client) messageDataErrorProcessing() {
-	protocol.Cleaner(c.err)
+	cleaner(c.err)
 	c.err.Type = protocol.DataMessageError
 	c.err.IndexNumber = c.data.IndexNumber
 	if c.data.Room {
@@ -189,7 +214,7 @@ func (c *Client) messageDataErrorProcessing() {
 	} else {
 		c.err.UserId = c.data.UserId
 	}
-	c.send <- protocol.Coder(c.err)
+	c.send <- coder(c.err)
 }
 
 func (c *Client) userInfoErrorProcessing() {

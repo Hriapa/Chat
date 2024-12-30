@@ -114,8 +114,8 @@ func (c *Client) ReadMessages() {
 
 		//Control Message
 		if payload[0] == uint8(protocol.ControlMessageTitle) {
-			protocol.Cleaner(c.control)
-			err = protocol.Decoder(c.control, payload)
+			cleaner(c.control)
+			err = decoder(c.control, payload)
 			if err != nil {
 				log.Printf("error decoding control message: %v", err)
 				continue
@@ -134,7 +134,7 @@ func (c *Client) ReadMessages() {
 		//Data Message
 		if payload[0] == uint8(protocol.DataMessageTitle) {
 			protocol.Cleaner(c.data)
-			err = protocol.Decoder(c.data, payload)
+			err = decoder(c.data, payload)
 			if err != nil {
 				log.Printf("error decoding message: %v", err)
 				continue
@@ -187,8 +187,8 @@ func (c *Client) ReadMessages() {
 
 		// Data acknowledge message
 		if payload[0] == uint8(protocol.AckMessageTitle) {
-			protocol.Cleaner(c.ack)
-			err = protocol.Decoder(c.ack, payload)
+			cleaner(c.ack)
+			err = decoder(c.ack, payload)
 			if err != nil {
 				log.Printf("error decoding control message: %v", err)
 				continue

@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS rooms
     id serial PRIMARY KEY,
     user_id1 integer NOT NULL,
     user_id2 integer NOT NULL,
-    quntity integer NOT NULL
+    quantity integer NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS nr_messages
