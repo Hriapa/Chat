@@ -27,18 +27,18 @@ func (s *ApiServer) createUser() http.HandlerFunc {
 		Password string `json:"password"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
 		if !s.store.Connect {
-			s.error(w, r, http.StatusInternalServerError, errConnectToDatabase)
+			s.error(w, http.StatusInternalServerError, errConnectToDatabase)
 			return
 		}
 		req := &request{}
 
 		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-			s.error(w, r, http.StatusBadRequest, err)
+			s.error(w, http.StatusBadRequest, err)
 			return
 		}
 		user := &model.User{
@@ -47,7 +47,7 @@ func (s *ApiServer) createUser() http.HandlerFunc {
 		}
 
 		if err := s.store.User().AddUser(user); err != nil {
-			s.error(w, r, http.StatusUnprocessableEntity, err)
+			s.error(w, http.StatusUnprocessableEntity, err)
 			return
 		}
 
@@ -56,20 +56,20 @@ func (s *ApiServer) createUser() http.HandlerFunc {
 
 		session, err := s.sessionStore.Get(r, sessionName)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 		}
 		session.Values["user_id"] = user.Id
 
 		err = s.sessionStore.Save(r, w, session)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 		}
 
 		//Добавляем пользователя в список
 
 		s.wsChat.NewUser <- &model.UserName{Id: user.Id, Name: user.Login}
 
-		s.result(w, r, http.StatusOK, nil)
+		s.result(w, http.StatusOK, nil)
 	}
 }
 
@@ -80,59 +80,59 @@ func (s *ApiServer) authorization() http.HandlerFunc {
 		Password string `json:"password"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
 		if !s.store.Connect {
-			s.error(w, r, http.StatusInternalServerError, errConnectToDatabase)
+			s.error(w, http.StatusInternalServerError, errConnectToDatabase)
 			return
 		}
 		req := &request{}
 
 		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-			s.error(w, r, http.StatusBadRequest, err)
+			s.error(w, http.StatusBadRequest, err)
 			return
 		}
 		user, err := s.store.User().FindByLogin(req.UserName)
 		if err != nil || !user.CheckPassword(req.Password) {
-			s.error(w, r, http.StatusUnauthorized, errIncorrectLoginOrPassword)
+			s.error(w, http.StatusUnauthorized, errIncorrectLoginOrPassword)
 			return
 		}
 
 		session, err := s.sessionStore.Get(r, sessionName)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 		}
 		session.Values["user_id"] = user.Id
 
 		err = s.sessionStore.Save(r, w, session)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 		}
 
-		s.result(w, r, http.StatusOK, nil)
+		s.result(w, http.StatusOK, nil)
 	}
 }
 
 // Аунтификация
 func (s *ApiServer) auntification(next http.HandlerFunc) http.HandlerFunc {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		session, err := s.sessionStore.Get(r, sessionName)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
 		id, ok := session.Values["user_id"]
 		if !ok {
-			s.error(w, r, http.StatusUnauthorized, errNotAuthenticated)
+			s.error(w, http.StatusUnauthorized, errNotAuthenticated)
 			return
 		}
 
 		_, err = s.store.User().FindById(id.(int))
 		if err != nil {
-			s.error(w, r, http.StatusUnauthorized, err)
+			s.error(w, http.StatusUnauthorized, err)
 			return
 		}
 		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKeyUser, id.(int))))
@@ -148,30 +148,30 @@ func (s *ApiServer) restorePassword() http.HandlerFunc {
 		Password string `json:"password"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
 		req := &request{}
 		if err := json.NewDecoder(r.Body).Decode(req); err != nil {
-			s.error(w, r, http.StatusBadRequest, err)
+			s.error(w, http.StatusBadRequest, err)
 			return
 		}
 		user, err := s.store.User().FindByLogin(req.UserName)
 		if err != nil {
-			s.error(w, r, http.StatusInternalServerError, errUserNotExist)
+			s.error(w, http.StatusInternalServerError, errUserNotExist)
 			return
 		}
 		user.CreateNewPassword()
 		user.EncryptPassword()
 		if err = s.store.User().UpdatePassword(user); err != nil {
 			log.Println("error update user password:", err.Error())
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
 		resp := &response{}
 		resp.Password = user.Password
-		s.result(w, r, http.StatusOK, resp)
+		s.result(w, http.StatusOK, resp)
 	}
 }
 
@@ -179,7 +179,7 @@ func (s *ApiServer) restorePassword() http.HandlerFunc {
 func (s *ApiServer) logout() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
@@ -200,7 +200,7 @@ func (s *ApiServer) userName() http.HandlerFunc {
 		Name string `json:"name"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodGet {
 			return
 		}
@@ -212,13 +212,13 @@ func (s *ApiServer) userName() http.HandlerFunc {
 		user.Id, err = strconv.Atoi(r.URL.Query().Get("id"))
 		if err != nil {
 			log.Println(err)
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
 		err = s.store.User().GetUserInfo(user)
 		if err != nil {
 			log.Println(err)
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
 		if user.Name == "" {
@@ -229,7 +229,7 @@ func (s *ApiServer) userName() http.HandlerFunc {
 		resp := &response{
 			Name: name,
 		}
-		s.result(w, r, http.StatusOK, resp)
+		s.result(w, http.StatusOK, resp)
 	}
 }
 
@@ -242,24 +242,24 @@ func (s *ApiServer) changePassword() http.HandlerFunc {
 		New string `json:"new"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
 		password := &request{}
 		if err := json.NewDecoder(r.Body).Decode(password); err != nil {
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
 
 		user, err := s.store.User().FindById(password.Id)
 		if err != nil {
-			s.error(w, r, http.StatusUnauthorized, errUserNotFound)
+			s.error(w, http.StatusUnauthorized, errUserNotFound)
 			return
 		}
 		// Проверяем пароль
 		if !user.CheckPassword(password.Old) {
-			s.error(w, r, http.StatusUnauthorized, errIncorrectPassword)
+			s.error(w, http.StatusUnauthorized, errIncorrectPassword)
 			return
 		}
 		//Обновляем пароль
@@ -267,10 +267,10 @@ func (s *ApiServer) changePassword() http.HandlerFunc {
 		user.EncryptPassword()
 		if err = s.store.User().UpdatePassword(user); err != nil {
 			log.Println("error update user password:", err.Error())
-			s.error(w, r, http.StatusInternalServerError, err)
+			s.error(w, http.StatusInternalServerError, err)
 			return
 		}
-		s.result(w, r, http.StatusOK, nil)
+		s.result(w, http.StatusOK, nil)
 	}
 }
 
@@ -280,7 +280,7 @@ func (s *ApiServer) chat() http.HandlerFunc {
 		User int `json:"user"`
 	}
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodGet {
 			return
 		}
@@ -289,7 +289,7 @@ func (s *ApiServer) chat() http.HandlerFunc {
 		if len(s.wsChat.Store.User().UsersList) == 0 {
 			if err := s.store.User().GetUsersList(); err != nil {
 				log.Println("errror, select users from database", err.Error())
-				s.result(w, r, http.StatusInternalServerError, nil)
+				s.result(w, http.StatusInternalServerError, nil)
 				return
 			}
 		}
@@ -300,7 +300,7 @@ func (s *ApiServer) chat() http.HandlerFunc {
 		}
 
 		//отправляем на клиент
-		s.result(w, r, http.StatusOK, resp)
+		s.result(w, http.StatusOK, resp)
 	}
 }
 
@@ -308,7 +308,7 @@ func (s *ApiServer) chat() http.HandlerFunc {
 func (s *ApiServer) wsServe() http.HandlerFunc {
 
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 
 		id, err := strconv.Atoi(r.URL.Query().Get("id"))
 		if err != nil {
@@ -355,18 +355,18 @@ func (s *ApiServer) wsServe() http.HandlerFunc {
 	}
 }
 
-func (s *ApiServer) error(w http.ResponseWriter, r *http.Request, code int, err error) {
-	s.result(w, r, code, err.Error())
+func (s *ApiServer) error(w http.ResponseWriter, code int, err error) {
+	s.result(w, code, err.Error())
 }
 
-func (s *ApiServer) result(w http.ResponseWriter, r *http.Request, code int, data interface{}) {
+func (s *ApiServer) result(w http.ResponseWriter, code int, data interface{}) {
 	w.WriteHeader(code)
 	if data != nil {
 		json.NewEncoder(w).Encode(data)
 	}
 }
 
-func setupCORS(w *http.ResponseWriter, r *http.Request) {
+func setupCORS(w *http.ResponseWriter) {
 	(*w).Header().Set("Access-Control-Allow-Origin", "http://localhost:8080")
 	(*w).Header().Set("Access-Control-Allow-Methods", "POST, PUT, GET, OPTIONS, PATCH, DELETE")
 	(*w).Header().Set("Content-Type", "application/json")
@@ -448,7 +448,7 @@ func (s *ApiServer) test() http.HandlerFunc {
 	var request = make([]byte, 2)
 	var raw []byte
 	return func(w http.ResponseWriter, r *http.Request) {
-		setupCORS(&w, r)
+		setupCORS(&w)
 		if r.Method != http.MethodPost {
 			return
 		}
